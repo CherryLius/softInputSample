@@ -78,7 +78,7 @@ public final class GraphicManager {
         }).start();
     }
 
-    private void copyAssetGraphicPath(@NonNull Context context, @NonNull String assetPath) {
+    private static void copyAssetGraphicPath(@NonNull Context context, @NonNull String assetPath) {
         File cacheFile = EmotionKit.get().getGraphicPath().getParentFile();
         if (!cacheFile.exists()) {
             cacheFile.mkdirs();
@@ -105,9 +105,9 @@ public final class GraphicManager {
         }
     }
 
-    private void copyGraphicFromAssets(@NonNull Context context,
-                                       final String savePath,
-                                       final List<String> srcFile) throws IOException {
+    private static void copyGraphicFromAssets(@NonNull Context context,
+                                              final String savePath,
+                                              final List<String> srcFile) throws IOException {
         AssetManager assetManager = context.getAssets();
         for (int i = 0; i < srcFile.size(); i++) {
             String assetSrc = srcFile.get(i);
