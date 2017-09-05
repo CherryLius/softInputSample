@@ -2,13 +2,13 @@ package cherry.android.softinput;
 
 import android.content.Context;
 import android.support.annotation.NonNull;
-import android.util.Log;
 
 import java.io.File;
 import java.util.concurrent.locks.ReentrantLock;
 
+import cherry.android.softinput.graphic.GraphicManager;
+
 import static cherry.android.softinput.graphic.GraphicManager.GRAPHIC_ASSETS;
-import static cherry.android.softinput.graphic.GraphicManager.copyAssetGraphicPath;
 
 /**
  * Created by ROOT on 2017/9/1.
@@ -37,12 +37,7 @@ public final class EmotionKit {
 
     public void init(@NonNull Context context) {
         mContext = context;
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                copyAssetGraphicPath(mContext, GRAPHIC_ASSETS);
-            }
-        }).start();
+        GraphicManager.get().startCopyAssets(context, GRAPHIC_ASSETS);
     }
 
     public void setImageLoader(@NonNull ImageLoader imageLoader) {

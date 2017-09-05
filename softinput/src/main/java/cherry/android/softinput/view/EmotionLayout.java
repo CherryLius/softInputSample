@@ -20,7 +20,6 @@ import cherry.android.softinput.R;
 import cherry.android.softinput.Values;
 import cherry.android.softinput.adapter.EmotionPagerAdapter;
 import cherry.android.softinput.emoji.EmojiManager;
-import cherry.android.softinput.emoji.EmojiProvider;
 import cherry.android.softinput.graphic.GraphicManager;
 import cherry.android.softinput.util.DensityUtils;
 import cherry.android.softinput.util.SizeHelper;
@@ -39,6 +38,7 @@ public class EmotionLayout extends LinearLayout implements View.OnClickListener 
     private EditText mAttachEditText;
     private OnEmotionSelectedListener mEmotionSelectedListener;
     private int mLastTab = -1;
+    private List<EmotionProvider> mList = new ArrayList<>();
 
     public EmotionLayout(@NonNull Context context) {
         this(context, null);
@@ -50,8 +50,26 @@ public class EmotionLayout extends LinearLayout implements View.OnClickListener 
 
     public EmotionLayout(@NonNull Context context, @Nullable AttributeSet attrs, @AttrRes int defStyleAttr) {
         super(context, attrs, defStyleAttr);
-        initEmoji();
-        init();
+        if (GraphicManager.get().isAssetCopyComplete()) {
+            initEmotion();
+        } else {
+            GraphicManager.get().setAssetsCopyListener(new GraphicManager.AssetsCopyListener() {
+                @Override
+                public void onComplete() {
+                    post(new Runnable() {
+                        @Override
+                        public void run() {
+                            init();
+                            initIndicator();
+                            initEmotion();
+                            initTabs();
+                            initListener();
+                            selectTab(0);
+                        }
+                    });
+                }
+            });
+        }
     }
 
     private void init() {
@@ -60,31 +78,22 @@ public class EmotionLayout extends LinearLayout implements View.OnClickListener 
         mViewPager = (ViewPager) findViewById(R.id.view_pager);
         mIndicator = (CircleIndicator) findViewById(R.id.indicator);
         mTabContainer = (LinearLayout) findViewById(R.id.tabs);
-        initTabs();
-        initIndicator();
         mViewPager.setOverScrollMode(OVER_SCROLL_NEVER);
-        selectTab(0);
+
     }
 
-    private List<EmotionProvider> mList = new ArrayList<>();
-
-    private void initEmoji() {
+    private void initEmotion() {
+        mList.clear();
         mList.add(EmojiManager.getEmoji(Values.CATEGORY_FACIAL));
         mList.add(EmojiManager.getEmoji(Values.CATEGORY_EMOJI));
-        mList.addAll(GraphicManager.get().getProvider());
-    }
-
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        final int childCount = mTabContainer.getChildCount();
-        for (int i = 0; i < childCount; i++) {
-            final View child = mTabContainer.getChildAt(i);
-            child.setOnClickListener(this);
+        List<? extends EmotionProvider> graphics = GraphicManager.get().getProvider();
+        if (graphics != null) {
+            mList.addAll(graphics);
         }
     }
 
     private void initTabs() {
+        mTabContainer.removeAllViews();
         for (int i = 0; i < mList.size(); i++) {
             EmotionTab emojiTab = new EmotionTab(getContext(), mList.get(i).getIndicator());
             emojiTab.setBackgroundResource(R.drawable.ic_tab_state_bg);
@@ -98,18 +107,24 @@ public class EmotionLayout extends LinearLayout implements View.OnClickListener 
         mIndicator.setupWithViewPager(mViewPager);
     }
 
-    @Override
-    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
-        super.onSizeChanged(w, h, oldw, oldh);
-        if (w > 0 && h > 0) {
-            SizeHelper.resolveParentSize(w, h);
-            SizeHelper.resolveTabAndIndicatorHeight((int) DensityUtils.dp2px(getContext(), 35), mIndicator.getMeasuredHeight());
+    private void initListener() {
+        final int childCount = mTabContainer.getChildCount();
+        for (int i = 0; i < childCount; i++) {
+            final View child = mTabContainer.getChildAt(i);
+            child.setOnClickListener(this);
         }
     }
 
     @Override
-    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        init();
+        initIndicator();
+        SizeHelper.resolveParentSize(w, h);
+        SizeHelper.resolveTabAndIndicatorHeight((int) DensityUtils.dp2px(getContext(), 35), mIndicator.getMeasuredHeight());
+        initTabs();
+        initListener();
+        selectTab(0);
     }
 
     public void attachEditText(@Nullable EditText editText) {
@@ -135,6 +150,8 @@ public class EmotionLayout extends LinearLayout implements View.OnClickListener 
     }
 
     private void selectTab(int position) {
+        if (mTabContainer.getChildCount() == 0)
+            return;
         if (mLastTab >= 0 && mLastTab < mTabContainer.getChildCount()) {
             mTabContainer.getChildAt(mLastTab).setSelected(false);
         }

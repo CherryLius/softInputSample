@@ -1,8 +1,6 @@
 package cherry.android.softinput.util;
 
-import android.content.Context;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.NonNull;
 import android.text.Editable;
 import android.util.Log;
 
@@ -47,7 +45,7 @@ public final class EmotionUtils {
         if (drawable != null) {
 //            final int width = (int) (drawable.getIntrinsicWidth() * scale);
 //            final int height = (int) (drawable.getIntrinsicHeight() * scale);
-            final float size = SizeHelper.resolveEmojiSize(EmotionKit.get().getContext());
+            final float size = SizeHelper.resolveEmojiSize(EmotionKit.get().getContext()) * 0.7f;
             final int width = (int) (size * scale);
             final int height = (int) (size * scale);
             drawable.setBounds(0, 0, width, height);

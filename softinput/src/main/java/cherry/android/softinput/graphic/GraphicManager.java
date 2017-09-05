@@ -15,6 +15,7 @@ import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.locks.ReentrantLock;
 
 import cherry.android.softinput.EmotionKit;
@@ -28,8 +29,56 @@ import cherry.android.softinput.model.GraphicCategory;
 public final class GraphicManager {
     private static final String TAG = "GraphicManager";
     public static final String GRAPHIC_ASSETS = "graphic";
+    private AtomicBoolean atomicBoolean;
 
-    public static void copyAssetGraphicPath(@NonNull Context context, @NonNull String assetPath) {
+    private static GraphicManager _instance;
+    private static ReentrantLock _lock = new ReentrantLock();
+    private Map<String, GraphicProvider> mCategoryMap = new HashMap<>();
+    private List<GraphicProvider> mCategoryList;
+    private AssetsCopyListener mListener;
+
+    public List<? extends EmotionProvider> getProvider() {
+        return this.mCategoryList;
+    }
+
+    public boolean isAssetCopyComplete() {
+        return atomicBoolean.get();
+    }
+
+    public void setAssetsCopyListener(@NonNull AssetsCopyListener listener) {
+        this.mListener = listener;
+    }
+
+    private GraphicManager() {
+        atomicBoolean = new AtomicBoolean(false);
+    }
+
+    public static GraphicManager get() {
+        if (_instance != null)
+            return _instance;
+        _lock.lock();
+        if (_instance == null)
+            _instance = new GraphicManager();
+        _lock.unlock();
+        return _instance;
+    }
+
+    public void startCopyAssets(@NonNull final Context context, @NonNull final String assetPath) {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                atomicBoolean.set(false);
+                copyAssetGraphicPath(context, assetPath);
+                loadGraphicEmoticons();
+                atomicBoolean.set(true);
+                if (mListener != null) {
+                    mListener.onComplete();
+                }
+            }
+        }).start();
+    }
+
+    private void copyAssetGraphicPath(@NonNull Context context, @NonNull String assetPath) {
         File cacheFile = EmotionKit.get().getGraphicPath().getParentFile();
         if (!cacheFile.exists()) {
             cacheFile.mkdirs();
@@ -56,9 +105,9 @@ public final class GraphicManager {
         }
     }
 
-    private static void copyGraphicFromAssets(@NonNull Context context,
-                                              final String savePath,
-                                              final List<String> srcFile) throws IOException {
+    private void copyGraphicFromAssets(@NonNull Context context,
+                                       final String savePath,
+                                       final List<String> srcFile) throws IOException {
         AssetManager assetManager = context.getAssets();
         for (int i = 0; i < srcFile.size(); i++) {
             String assetSrc = srcFile.get(i);
@@ -84,29 +133,6 @@ public final class GraphicManager {
         }
     }
 
-    private static GraphicManager _instance;
-    private static ReentrantLock _lock = new ReentrantLock();
-    private Map<String, GraphicProvider> mCategoryMap = new HashMap<>();
-    private List<GraphicProvider> mCategoryList;
-
-    private GraphicManager() {
-        loadGraphicEmoticons();
-    }
-
-    public static GraphicManager get() {
-        if (_instance != null)
-            return _instance;
-        _lock.lock();
-        if (_instance == null)
-            _instance = new GraphicManager();
-        _lock.unlock();
-        return _instance;
-    }
-
-    public List<? extends EmotionProvider> getProvider() {
-        return this.mCategoryList;
-    }
-
     private void loadGraphicEmoticons() {
         File file = EmotionKit.get().getGraphicPath();
         if (!file.exists())
@@ -127,5 +153,9 @@ public final class GraphicManager {
                 return t0.getCategory().getOrder() - t1.getCategory().getOrder();
             }
         });
+    }
+
+    public interface AssetsCopyListener {
+        void onComplete();
     }
 }

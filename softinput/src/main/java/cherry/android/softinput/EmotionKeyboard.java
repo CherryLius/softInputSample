@@ -97,6 +97,7 @@ public class EmotionKeyboard implements View.OnClickListener {
      */
     public EmotionKeyboard setEmotionLayout(@NonNull View emotionLayout) {
         mEmotionLayout = emotionLayout;
+        mEmotionLayout.setVisibility(View.GONE);
         return this;
     }
 
